@@ -40,8 +40,11 @@ def chunk_shuffle(batchsize, *arrs):
 
 class Trainer(object):
     def __init__(self, model, optimizer, callbacks={}, seed=42, cuda=False,
-                 print_every=25, batchsize=2048, window=500, clip=None):
+                 print_every=25, batchsize=2048, window=500, clip=None, 
+                 backward_kwargs={}):
         self.model = model
+        if cuda:
+            self.model = self.model.cuda()
         self.optimizer = optimizer
         self.callbacks = callbacks
         self.previous_log = []
@@ -54,6 +57,7 @@ class Trainer(object):
         self.window = window
         self.clip = clip
         self.cuda = cuda
+        self.backward_kwargs = backward_kwargs
 
     def fit(self, *args):
         # args is X1, X2,...Xn, Yn
@@ -68,7 +72,7 @@ class Trainer(object):
             pred = self.model.forward(*batch)
             loss = self.model.loss(pred, *batch)
             scalar = sum(loss)
-            scalar.backward()
+            scalar.backward(**self.backward_kwargs)
             grad_norm = max(p.grad.data.abs().max()
                             for p in self.model.parameters()
                             if p.grad is not None)
