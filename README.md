@@ -3,7 +3,7 @@ Very simple pytorch training utility.
 - Allows both `forward` and `loss` functions to access model parameters
 - Can register callback functions
 
-```
+```python
 from torch_trainer.trainer import Trainer
 from torch_trainer.callbacks import rms_callback
 from torch import nn
