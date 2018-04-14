@@ -40,8 +40,8 @@ def chunk_shuffle(batchsize, *arrs):
 
 class Trainer(object):
     def __init__(self, model, optimizer, callbacks={}, seed=42, cuda=False,
-                 print_every=25, batchsize=2048, window=500, clip=None, 
-                 backward_kwargs={}):
+                 print_every=25, batchsize=2048, window=500, clip=None,
+                 grad_norm=False, backward_kwargs={}):
         self.model = model
         if cuda:
             self.model = self.model.cuda()
@@ -58,6 +58,7 @@ class Trainer(object):
         self.clip = clip
         self.cuda = cuda
         self.backward_kwargs = backward_kwargs
+        self.grad_norm = grad_norm
 
     def fit(self, *args):
         # args is X1, X2,...Xn, Yn
@@ -73,16 +74,17 @@ class Trainer(object):
             loss = self.model.loss(pred, *batch)
             scalar = sum(loss)
             scalar.backward(**self.backward_kwargs)
-            grad_norm = max(p.grad.data.abs().max()
-                            for p in self.model.parameters()
-                            if p.grad is not None)
             if self.clip:
                 torch.nn.utils.clip_grad_norm(self.model.parameters(),
                                               self.clip)
             self.optimizer.step()
             stop = time.time()
             kwargs = {f'loss_{i}': l.data[0] for i, l in enumerate(loss)}
-            kwargs['grad_norm_max'] = grad_norm
+            if self.grad_norm:
+                grad_norm = max(p.grad.data.abs().max()
+                                for p in self.model.parameters()
+                                if p.grad is not None)
+                kwargs['grad_norm_max'] = grad_norm
             self.run_callbacks(batch, pred, train=True, iter_time=stop-start,
                                **kwargs)
             if self._iteration % self.print_every == 0:
